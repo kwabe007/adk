@@ -1,0 +1,12 @@
+Matris M:
+___________
+|0 1 2 3 4 |
+|1 1 1 2 3 |
+|2 2 2 1 2 |
+|3 2 3 2 2 |
+|4 3 3 3 2 |
+------------
+
+2. Beräknar editeringsavståndet mellan två strängar med längden x och y, om x och y är kortare än
+resp. strängs längd räknar den på strängarna som om de vore kortare.
+
