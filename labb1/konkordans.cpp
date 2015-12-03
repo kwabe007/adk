@@ -273,7 +273,11 @@ main(int argc, char** argv)
     //textFile = fopen("text", "r");
     textFile = fopen("/info/adk15/labb1/korpus", "r");
 
-    std::string word = argv[1];
+    if (argc < 2) {
+        std::cerr << "FEL: Inget sökord har angivits som argument!" << std::endl;
+        std::exit(EXIT_FAILURE);
+    }
+    std::string word(argv[1]);
     word = toIso(word);
     printf("Sökta ordet: %s\n", word.c_str());
 

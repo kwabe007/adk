@@ -1,0 +1,6 @@
+#ignore binary and executable files
+*.bin
+*.out
+
+#ignore temps
+*~
