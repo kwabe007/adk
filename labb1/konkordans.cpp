@@ -1,4 +1,5 @@
-#include <stdio.h>
+#include <cstdio>
+#include <unistd.h>
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -150,7 +151,6 @@ int * binSearch(std::string word, int * indexArray, FILE * file) {
 
         }
         sword.clear();
-
     }
 
     int * positionArray = new int[1000000];
@@ -165,7 +165,7 @@ int * binSearch(std::string word, int * indexArray, FILE * file) {
 
     for(int p = 0; foundAll == 0; p++) {
         std::string buffer;
-        std::string intervalString = seek(i + (p * (chunkSize)-lastLength), file, 0, chunkSize);
+        std::string intervalString = seek(i + (p*(chunkSize)-lastLength), file, 0, chunkSize);
         ch = *intervalString.rbegin();
         if (ch == '\n') {
             intervalString.append("l");
@@ -221,7 +221,7 @@ int * createIndexArray()
     memset(indexArray, -1, sizeof(int)*indexSize);
 
     //std::ifstream index("text2");
-    std::ifstream index("/var/tmp/utfil");
+    std::ifstream index("/var/tmp/konkordanzBitches");
     std::string buffer;
 
     std::fstream arrayFile;
@@ -239,7 +239,6 @@ int * createIndexArray()
             if(indexArray[locationInIndexArray] == -1) {
                 indexArray[locationInIndexArray] = position;
             }
-
             position = index.tellg();
         }
         for(int i = 0; i < indexSize; i++) {
@@ -268,11 +267,11 @@ main(int argc, char** argv)
 
     FILE * indexFile;
     //indexFile = fopen("text2", "r");
-    indexFile = fopen("/var/tmp/utfil", "r");
+    indexFile = fopen("/var/tmp/konkordanzBitches", "r");
 
     FILE * textFile;
     //textFile = fopen("text", "r");
-    textFile = fopen("/afs/nada.kth.se/info/adk14/labb1/korpus", "r");
+    textFile = fopen("/info/adk15/labb1/korpus", "r");
 
     std::string word = argv[1];
     word = toIso(word);
