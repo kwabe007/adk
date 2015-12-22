@@ -70,14 +70,17 @@ void writeFlowGraph() {
         cout << u << " " << v << " " << c << "\n";
         //cerr << u << " " << v << " " << c << "\n";
     }
+
     for (int i = 1; i <= X; ++i) {
         cout << s << " " << i << " " << 1 << "\n";
         //cerr << s << " " << i << " " << 1 << "\n";
     }
+
     for (int i = X + 1; i <= X + Y; ++i) {
         cout << i << " " << t << " " << 1 << "\n";
         //cerr << i << " " << t << " " << 1 << "\n";
     }
+
     // Var noggrann med att flusha utdata när flödesgrafen skrivits ut!
     cout.flush();
 
@@ -105,7 +108,7 @@ void readMaxFlowSolution() {
         // Flöde f från u till v
         cin >> u >> v >> f;
         //cerr << u << " " << v << " " << f << "\n";
-        if(u == s | v == t) {
+        if(u == s || v == t) {
             //NOP
         }
         else if(f <= 1) {
