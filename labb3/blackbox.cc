@@ -2,6 +2,8 @@
 #include <vector>
 #include <queue>
 #include <stdexcept>
+#include <unordered_set>
+#include <limits.h>
 
 using std::cin;
 using std::cout;
@@ -20,14 +22,12 @@ struct Node {
 };
 
 struct Edge {
-private:
 
     unsigned int capacity = 0;
     unsigned int flow = 0;
     Node* from_node_ptr = nullptr;
     Node* to_node_ptr = nullptr;
 
-public:
     Edge() {
     }
 
@@ -103,6 +103,42 @@ struct FlowGraph {
     friend std::ostream& operator << (std::ostream& os, FlowGraph& flow);
 };
 
+struct Step {
+    Step () {
+    }
+    Step (Node* nd) {
+        current_node = nd;
+    }
+    Step (Node* fr_nd, Node* curr_nd, Edge* e) {
+        from_node = fr_nd;
+        current_node = curr_nd;
+        edge = e;
+    }
+
+    Node* from_node = nullptr;
+    Node* current_node = nullptr;
+    Edge* edge = nullptr;
+    bool shortest = false;
+    Step* from = nullptr;
+    unsigned int lowest_rest_capacity = UINT_MAX;
+
+    Step new_step(Edge* edge) {
+        Node* next_node = edge->to_node_ptr;
+        Step step(current_node,edge->to_node_ptr,edge);
+        return step;
+    }
+};
+
+Step breadthFirst(FlowGraph& fg) {
+    std::unordered_set<std::size_t> visited;
+    std::vector<Step> steps(1,Step(&fg[fg.source]));
+    return Step(nullptr);
+}
+
+void search(FlowGraph& fg) {
+    std::vector<Step> steps;
+}
+
 std::ostream& operator << (std::ostream& os, FlowGraph& flow) {
     os << "Edges: " << flow.get_edges() << " Source: " << flow.source << " Target: " << flow.target << "\n";
     for (std::size_t i = 0; i < flow.edge_vec.size(); ++i) {
@@ -132,6 +168,7 @@ FlowGraph readFlowGraphFromStream(std::istream& input_stream) {
     FlowGraph flow_graph(size, input_stream);
     return flow_graph;
 }
+
 
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
