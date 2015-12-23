@@ -4,11 +4,15 @@
 #include <stdexcept>
 #include <unordered_set>
 #include <limits.h>
+#include <list>
+#include "debugmacro.hpp"
 
 using std::cin;
 using std::cout;
 using std::cerr;
 
+std::ofstream ERR_FS("log");
+unsigned int GLOBAL_DEBUG_BITS = 3;
 
 class Edge;
 
@@ -16,6 +20,7 @@ struct Node {
 
     std::size_t index = 0;
     std::vector<Edge*> edge_ptr_vec;
+
     std::string get_str() const {
         return std::to_string(index);
     }
@@ -46,14 +51,22 @@ struct Edge {
             return capacity-flow;
         if (node_ptr == to_node_ptr)
             return flow;
-        throw std::invalid_argument("Non-matching node_ptr for getting rest capacity for edge " + get_str());
+        if (node_ptr == nullptr) throw std::invalid_argument("Input pointer for rest capacity of edge " + get_str() + "is null");
+        throw std::invalid_argument("Non-matching node_ptr " + node_ptr->get_str() + " for getting rest capacity for edge " + get_str());
         return 0;
     }
 
     std::string get_str() const {
         if (from_node_ptr && to_node_ptr)
-        return from_node_ptr->get_str() + "-" + to_node_ptr->get_str() + ":" + std::to_string(capacity);
+        return from_node_ptr->get_str() + "-" + to_node_ptr->get_str() + ":[" + std::to_string(flow) + "/" + std::to_string(capacity) + "]";
         return "UNDEFINED";
+    }
+
+    Node* get_other_node_ptr(Node* nd) const {
+        if (nd == from_node_ptr) return to_node_ptr;
+        if (nd == to_node_ptr) return from_node_ptr;
+        throw std::invalid_argument("Trying to get other node from edge " + get_str() + " with node " + std::to_string(nd->index));
+        return nd;
     }
 
 };
@@ -72,9 +85,11 @@ struct FlowGraph {
         }
         input_stream >> source >> target;
         input_stream >> edges;
+        debug_println(BIT0, "Flow graph Source: " << source << " Target: " << target << " Edges: " << edges);
         unsigned int index_from, index_to, cap;
         for (unsigned int i = 0; i < edges; ++i) {
             input_stream >> index_from >> index_to >> cap;
+            debug_println(BIT0, "Index from: " << index_from << " Index to: " << index_to << " Capacity: " << cap);
             setup_edge(index_from,index_to,cap);
         }
     }
@@ -82,9 +97,9 @@ struct FlowGraph {
     void setup_edge(unsigned int i_from, unsigned int i_to, unsigned int cap) {
         Node* node_from_ptr = &(node_vec[i_from]);
         Node* node_to_ptr = &(node_vec[i_to]);
-        edge_vec.push_back(Edge(node_from_ptr, node_to_ptr, cap));
-        node_from_ptr->edge_ptr_vec.push_back(&edge_vec.back());
-        node_to_ptr->edge_ptr_vec.push_back(&edge_vec.back());
+        edge_vec.emplace_back(Edge(node_from_ptr, node_to_ptr, cap));
+        node_from_ptr->edge_ptr_vec.emplace_back(&edge_vec.back());
+        node_to_ptr->edge_ptr_vec.emplace_back(&edge_vec.back());
     }
 
     Node& operator [](std::size_t i) {
@@ -100,6 +115,14 @@ struct FlowGraph {
         return node_vec.size()-index_offset;
     }
 
+    Node& get_first_node() {
+        return node_vec[source];
+    }
+
+    Node& get_last_node() {
+        return node_vec[target];
+    }
+
     friend std::ostream& operator << (std::ostream& os, FlowGraph& flow);
 };
 
@@ -109,9 +132,9 @@ struct Step {
     Step (Node* nd) {
         current_node = nd;
     }
-    Step (Node* fr_nd, Node* curr_nd, Edge* e) {
-        from_node = fr_nd;
-        current_node = curr_nd;
+    Step (Step* daddy, Edge* e) {
+        from_node = daddy->current_node;
+        current_node = e->get_other_node_ptr(daddy->current_node);
         edge = e;
     }
 
@@ -123,15 +146,55 @@ struct Step {
     unsigned int lowest_rest_capacity = UINT_MAX;
 
     Step new_step(Edge* edge) {
-        Node* next_node = edge->to_node_ptr;
-        Step step(current_node,edge->to_node_ptr,edge);
+        Step step(this,edge);
         return step;
+    }
+
+    static std::string get_step_chain (Step* step) {
+        if (step->from) return step->current_node->get_str() + get_step_chain(step->from);
+        return step->current_node->get_str();
     }
 };
 
-Step breadthFirst(FlowGraph& fg) {
+void expand_step_into_list(Step& step, std::list<Step>& queue, std::unordered_set<std::size_t>& visited) {
+    debug_println(BIT1,"Expanding vertex " << step.current_node->index << ", Edges: " << step.current_node->edge_ptr_vec.size());
+    Node* current_node_ptr = step.current_node;
+    debug_println(BIT1,"Going through edges... ");
+    for(std::size_t i = 0; i < current_node_ptr->edge_ptr_vec.size(); ++i) {
+        Edge* edge = current_node_ptr->edge_ptr_vec[i];
+        debug_println(BIT1,"Checking edge " << edge->get_str());
+        if (edge->get_rest_capacity(current_node_ptr) == 0) {
+            debug_println(BIT1," Edge restcapacity is zero, skipping edge...");
+            continue;
+        }
+        Node* to_node_ptr = edge->get_other_node_ptr(current_node_ptr);
+        if(visited.find(to_node_ptr->index) != visited.end()) {
+            debug_println(BIT1,"Destination vertex " << to_node_ptr->index << " already in map, skipping edge...");
+            continue;
+        }
+        queue.emplace_back(step.new_step(edge));
+        debug_println(BIT1,"New step emplaced in queue, index of current vertex: " << queue.back().current_node->index);
+    }
+}
+
+Step breadth_first(FlowGraph& fg) {
+    std::size_t nodes_searched = 0;
+    debug_println(BIT1,"Started Breadth First search");
     std::unordered_set<std::size_t> visited;
-    std::vector<Step> steps(1,Step(&fg[fg.source]));
+    std::list<Step> queue;
+    queue.emplace_back(Step(&fg.get_first_node()));
+    debug_println(BIT1,"Constructed queue");
+    while (!queue.empty()) {
+        ++nodes_searched;
+        Step& step(queue.front());
+        if (step.current_node == &fg.get_last_node()) {
+            debug_println(BIT1,"Found shortest path to vertex " << queue.back().current_node->index << ":");
+            debug_println(BIT1, Step::get_step_chain(&queue.back()));
+            debug_println(BIT1,"Searched through " << nodes_searched << " nodes");
+        }
+        queue.pop_front();
+        expand_step_into_list(step,queue,visited);
+    }
     return Step(nullptr);
 }
 
@@ -165,18 +228,34 @@ FlowGraph readFlowFromFile(std::ifst) {
 FlowGraph readFlowGraphFromStream(std::istream& input_stream) {
     std::size_t size;
     input_stream >> size;
+    debug_println(BIT0, "Number of vertices read from flow graph: " << size);
     FlowGraph flow_graph(size, input_stream);
     return flow_graph;
 }
 
+FlowGraph readFromFile(std::string filename) {
+    std::ifstream fs(filename);
+    FlowGraph flow_graph = readFlowGraphFromStream(fs);
+    fs.close();
+    return flow_graph;
+}
+
+FlowGraph readFlowGraphFromStandardInput() {
+    FlowGraph flow_graph = readFlowGraphFromStream(std::cin);
+    return flow_graph;
+}
 
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
     std::cin.tie(0);
 
     //readFlowGraph(std::cin);
-    FlowGraph flow_graph = readFlowGraphFromStream(std::cin);
-    std::cout << flow_graph;
+    FlowGraph flow_graph = readFromFile("flowgraph.in");
+    std::cout << flow_graph << std::endl;
+    std::string discard;
+    std::getline(std::cin, discard);
+    //std::getline(std::cin, discard);
+    breadth_first(flow_graph);
     //solveFlow();
 
     //writeFlow();
