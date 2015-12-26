@@ -12,7 +12,7 @@ using std::cout;
 using std::cerr;
 
 std::ofstream ERR_FS("log");
-unsigned int GLOBAL_DEBUG_BITS = 3;
+unsigned int GLOBAL_DEBUG_BITS = 7;
 
 class Edge;
 
@@ -141,6 +141,10 @@ std::ostream& operator << (std::ostream& os, FlowGraph& flow) {
 
 struct Step {
 
+    Step () {
+
+    }
+
     Step (std::size_t vertex_index) {
         current_vertex_index = vertex_index;
     }
@@ -156,13 +160,26 @@ struct Step {
     std::size_t current_vertex_index = 0;
     std::size_t edge_index = 0;
     bool shortest = false;
-    Step* from = this;
+    Step* from = nullptr;
     unsigned int lowest_rest_capacity = UINT_MAX;
 
+    bool operator==(const Step& ref) const {
+        return current_vertex_index == ref.current_vertex_index;
+    }
+
     static std::string get_step_chain (Step* step) {
-        if (step->from != step) return std::to_string(step->current_vertex_index) + " " + get_step_chain(step->from);
+        if (step->from) return get_step_chain(step->from) + " " + std::to_string(step->current_vertex_index);
         return std::to_string(step->current_vertex_index);
     }
+};
+
+struct StepHasher {
+  std::size_t operator()(const Step& s) const {
+    using std::size_t;
+    using std::hash;
+
+    return s.current_vertex_index;
+  }
 };
 
 FlowGraph* readFlowGraphFromStream(std::istream& input_stream) {
@@ -185,25 +202,26 @@ FlowGraph* readFlowGraphFromStandardInput() {
     return flow_graph_ptr;
 }
 
-bool expand_step_into_list(FlowGraph& fg, Step& step, std::list<Step>& queue, std::unordered_set<std::size_t>& visited) {
-    std::size_t vertex_index = step.current_vertex_index;
-    debug_println(BIT1,"Expanding vertex " << vertex_index << ", Edges: " << fg[vertex_index].edge_index_list.size());
+bool expand_step_into_list(FlowGraph& fg, Step* step, std::list<Step*>& queue, std::vector<Step>& visited) {
+    std::size_t vertex_index = step->current_vertex_index;
+    debug_println(BIT2,"Expanding vertex " << vertex_index << ", Edges: " << fg[vertex_index].edge_index_list.size());
     Vertex& current_vertex = fg.vertex_vec[vertex_index];
-    debug_println(BIT1,"Going through edges... ");
+    debug_println(BIT2,"Going through edges... ");
     for(std::list<std::size_t>::const_iterator i = current_vertex.edge_index_list.begin(); i != current_vertex.edge_index_list.end(); ++i) {
         Edge& edge = fg.edge_vec[*i];
-        debug_println(BIT1,"Checking edge " << edge.get_str());
+        debug_println(BIT2,"Checking edge " << edge.get_str());
         if (edge.get_rest_capacity(vertex_index) == 0) {
-            debug_println(BIT1,"Edge restcapacity is zero, skipping edge...");
+            debug_println(BIT2,"Edge restcapacity is zero, skipping edge...");
             continue;
         }
         std::size_t to_vertex_index = edge.get_other_vertex_index(vertex_index);
-        if(visited.find(to_vertex_index) != visited.end()) {
-            debug_println(BIT1,"Destination vertex " << to_vertex_index << " already in map, skipping edge...");
+        if(visited[to_vertex_index].current_vertex_index != 0) {
+            debug_println(BIT2,"Destination vertex " << to_vertex_index << " already in vector, skipping edge...");
             continue;
         }
-        queue.emplace_back(Step (&step, *i, to_vertex_index));
-        debug_println(BIT1,"New step emplaced in queue, index of current vertex: " << queue.back().current_vertex_index);
+        visited[to_vertex_index] = Step(step, *i, to_vertex_index);
+        queue.emplace_back(&visited[to_vertex_index]);
+        debug_println(BIT2,"New step emplaced in queue, index of current vertex: " << queue.back()->current_vertex_index);
         if (to_vertex_index == fg.target)
             return true;
     }
@@ -211,23 +229,24 @@ bool expand_step_into_list(FlowGraph& fg, Step& step, std::list<Step>& queue, st
 }
 
 void breadth_first(FlowGraph& fg) {
-    std::size_t vertices_searched = 0;
+    std::size_t vertices_searched = 1;
     debug_println(BIT1,"Started Breadth First search");
-    std::unordered_set<std::size_t> visited;
-    std::list<Step> queue;
-    queue.emplace_back(Step(fg.source));
+    std::vector<Step> visited(fg.vertex_vec.size());
+    visited[fg.source] = Step(fg.source);
+    std::list<Step*> queue;
+    queue.emplace_back(&visited[fg.source]);
+
     debug_println(BIT1,"Constructed queue");
     while (!queue.empty()) {
         ++vertices_searched;
-        Step& step = queue.front();
+        Step* step = queue.front();
         if (expand_step_into_list(fg,step,queue,visited)) {
-            debug_println(BIT1,"Found shortest path to vertex " << queue.back().current_vertex_index << ":");
-            debug_println(BIT1, Step::get_step_chain(&queue.back()));
+            debug_println(BIT1,"Found shortest path to target vertex " << queue.back()->current_vertex_index << ":");
+            debug_println(BIT1, Step::get_step_chain(queue.back()));
             debug_println(BIT1,"Searched through " << vertices_searched << " vertices");
             break;
         }
         queue.pop_front();
-        expand_step_into_list(fg,step,queue,visited);
     }
     return;
 }

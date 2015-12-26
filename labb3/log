@@ -13,18 +13,12 @@ Checking edge 1-2:[0/1]
 New step emplaced in queue, index of current vertex: 2
 Checking edge 1-3:[0/2]
 New step emplaced in queue, index of current vertex: 3
-Expanding vertex 1, Edges: 2
-Going through edges... 
-Checking edge 1-2:[0/1]
-New step emplaced in queue, index of current vertex: 2
-Checking edge 1-3:[0/2]
-New step emplaced in queue, index of current vertex: 3
 Expanding vertex 2, Edges: 3
 Going through edges... 
 Checking edge 1-2:[0/1]
- Edge restcapacity is zero, skipping edge...
+Edge restcapacity is zero, skipping edge...
 Checking edge 2-4:[0/2]
 New step emplaced in queue, index of current vertex: 4
-Found shortest path to vertex 4:
-4 2 2
-Searched through 2 vertices
+Found shortest path to target vertex 4:
+1 2 4
+Searched through 3 vertices
