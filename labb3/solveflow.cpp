@@ -12,7 +12,7 @@ using std::cout;
 using std::cerr;
 
 std::ofstream ERR_FS("log");
-unsigned int GLOBAL_DEBUG_BITS = 7;
+unsigned int GLOBAL_DEBUG_BITS = 15;
 
 class Edge;
 
@@ -44,6 +44,19 @@ struct Edge {
 
     unsigned int get_capacity() const {
         return capacity;
+    }
+
+    void add_flow (std::size_t flow_to_add, std::size_t vertex_index) {
+         if (flow_to_add > get_rest_capacity(vertex_index)) throw std::out_of_range("Can not add flow " + std::to_string(flow_to_add) + " to edge " + get_str());
+         if (vertex_index == from_vertex_index) {
+             flow += flow_to_add;
+             return;
+         }
+         if (vertex_index == to_vertex_index) {
+             flow -= flow_to_add;
+             return;
+         }
+         throw std::invalid_argument("Non-matching vertex index " + std::to_string(vertex_index) + " for adding flow to edge " + get_str());
     }
 
     unsigned int get_rest_capacity(std::size_t vertex_index) const {
@@ -100,6 +113,10 @@ struct FlowGraph {
         edge_vec.emplace_back(Edge(i_from, i_to, cap));
         vertex_from.edge_index_list.push_back(edge_vec.size()-1);
         vertex_to.edge_index_list.push_back(edge_vec.size()-1);
+    }
+
+    void add_flow_to_edge(std::size_t edge_index, std::size_t flow, std::size_t from_vertex_index) {
+        edge_vec[edge_index].add_flow(flow,from_vertex_index);
     }
 
     Vertex& operator [](std::size_t i) {
@@ -202,6 +219,34 @@ FlowGraph* readFlowGraphFromStandardInput() {
     return flow_graph_ptr;
 }
 
+void apply_step(FlowGraph& fg, const Step* end_step) {
+    debug_println(BIT3,"Checking rest capacities...");
+    const Step* current_step = end_step;
+    std::size_t lowest_rest_capacity = UINT_MAX;
+
+    while (current_step->from) {
+        Edge& edge = fg.edge_vec[current_step->edge_index];
+        debug_println(BIT3,"Checking edge: " + edge.get_str());
+        if (edge.get_rest_capacity(current_step->from_vertex_index) < lowest_rest_capacity) {
+            lowest_rest_capacity = edge.get_rest_capacity(current_step->from_vertex_index);
+            debug_println(BIT3,"Lowest rest capacity set to " + std::to_string(lowest_rest_capacity));
+        }
+        current_step = current_step->from;
+    }
+    debug_println(BIT3,"Done with rest capacity checking, lowest found: " + std::to_string(lowest_rest_capacity));
+
+    debug_println(BIT3,"Applying flow");
+    current_step = end_step;
+    while (current_step->from) {
+        Edge& edge = fg.edge_vec[current_step->edge_index];
+        debug_println(BIT3,"Adding flow to edge " + edge.get_str());
+        edge.add_flow(lowest_rest_capacity,current_step->from_vertex_index);
+        current_step = current_step->from;
+    }
+    debug_println(BIT3,"Done adding flow! Current flow graph:");
+    debug_println(BIT3,fg);
+}
+
 bool expand_step_into_list(FlowGraph& fg, Step* step, std::list<Step*>& queue, std::vector<Step>& visited) {
     std::size_t vertex_index = step->current_vertex_index;
     debug_println(BIT2,"Expanding vertex " << vertex_index << ", Edges: " << fg[vertex_index].edge_index_list.size());
@@ -235,6 +280,7 @@ void breadth_first(FlowGraph& fg) {
     visited[fg.source] = Step(fg.source);
     std::list<Step*> queue;
     queue.emplace_back(&visited[fg.source]);
+    bool path_found = false;
 
     debug_println(BIT1,"Constructed queue");
     while (!queue.empty()) {
@@ -244,10 +290,13 @@ void breadth_first(FlowGraph& fg) {
             debug_println(BIT1,"Found shortest path to target vertex " << queue.back()->current_vertex_index << ":");
             debug_println(BIT1, Step::get_step_chain(queue.back()));
             debug_println(BIT1,"Searched through " << vertices_searched << " vertices");
+            path_found = true;
             break;
         }
         queue.pop_front();
     }
+    if (path_found) apply_step(fg,queue.back());
+    else debug_println(BIT1,"No path found");
     return;
 }
 
@@ -264,6 +313,7 @@ int main(int argc, char* argv[]) {
     std::cout << *flow_graph_ptr << std::endl;
     std::string discard;
     std::getline(std::cin, discard);
+    breadth_first(*flow_graph_ptr);
     breadth_first(*flow_graph_ptr);
     //solveFlow();
 
