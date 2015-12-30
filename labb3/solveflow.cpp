@@ -5,16 +5,11 @@
 #include <unordered_set>
 #include <limits.h>
 #include <list>
+#include <ctime>
 #include "debugmacro.hpp"
 
-using std::cin;
-using std::cout;
-using std::cerr;
-
 std::ofstream ERR_FS("log");
-unsigned int GLOBAL_DEBUG_BITS = 15;
-
-class Edge;
+unsigned int GLOBAL_DEBUG_BITS = 0b10000000;
 
 struct Vertex {
 
@@ -128,7 +123,7 @@ struct FlowGraph {
         return edge_vec.size();
     }
 
-    std::size_t get_vertexs() const {
+    std::size_t get_vertices() const {
         return vertex_vec.size()-index_offset;
     }
 
@@ -140,19 +135,42 @@ struct FlowGraph {
         return vertex_vec[target];
     }
 
-    friend std::ostream& operator << (std::ostream& os, FlowGraph& flow);
+    std::size_t get_total_flow() const {
+        std::size_t total_flow = 0;
+        for (std::size_t edge_index : vertex_vec[source].edge_index_list) {
+            const Edge& edge = edge_vec[edge_index];
+            total_flow += edge.flow;
+        }
+    return total_flow;
+    }
+
+    std::string to_str() const {
+        std::string output;
+
+        output += "Edges: " + std::to_string(get_edges()) + " Source: " + std::to_string(source) + " Target: " + std::to_string(target) + "\n";
+        for (std::size_t i = 0; i < edge_vec.size(); ++i) {
+            output += edge_vec[i].get_str() + "\n";
+        }
+
+        output += "Vertices: " + std::to_string(get_vertices());
+        return output;
+    }
+
+    friend std::ostream& operator << (std::ostream& os, const FlowGraph& flow);
 };
 
-std::ostream& operator << (std::ostream& os, FlowGraph& flow) {
-    os << "Edges: " << flow.get_edges() << " Source: " << flow.source << " Target: " << flow.target << "\n";
-    for (std::size_t i = 0; i < flow.edge_vec.size(); ++i) {
-        os << flow.edge_vec[i].get_str() << "\n";
-    }
+std::ostream& operator << (std::ostream& os, const FlowGraph& flow) {
 
-    os << "Vertexs: " << flow.get_vertexs() << "\n";
-    for (std::size_t i = flow.index_offset; i < flow.vertex_vec.size(); ++i) {
-        os << flow.vertex_vec[i].get_str() << "\n";
+    os << flow.get_vertices() << "\n" << flow.source << " " << flow.target << " " << flow.get_total_flow() << "\n";
+    std::size_t pos_edges = 0;
+    std::string edges_str;
+    for (const Edge& edge : flow.edge_vec) {
+        if (edge.flow > 0) {
+            edges_str += "\n" + std::to_string(edge.from_vertex_index) + " " + std::to_string(edge.to_vertex_index) + " " + std::to_string(edge.flow);
+            ++pos_edges;
+        }
     }
+    os << pos_edges << edges_str;
     return os;
 }
 
@@ -244,7 +262,7 @@ void apply_step(FlowGraph& fg, const Step* end_step) {
         current_step = current_step->from;
     }
     debug_println(BIT3,"Done adding flow! Current flow graph:");
-    debug_println(BIT3,fg);
+    debug_println(BIT3,fg.to_str());
 }
 
 bool expand_step_into_list(FlowGraph& fg, Step* step, std::list<Step*>& queue, std::vector<Step>& visited) {
@@ -273,7 +291,7 @@ bool expand_step_into_list(FlowGraph& fg, Step* step, std::list<Step*>& queue, s
     return false;
 }
 
-void breadth_first(FlowGraph& fg) {
+bool breadth_first(FlowGraph& fg) {
     std::size_t vertices_searched = 1;
     debug_println(BIT1,"Started Breadth First search");
     std::vector<Step> visited(fg.vertex_vec.size());
@@ -297,7 +315,7 @@ void breadth_first(FlowGraph& fg) {
     }
     if (path_found) apply_step(fg,queue.back());
     else debug_println(BIT1,"No path found");
-    return;
+    return path_found;
 }
 
 void search(FlowGraph& fg) {
@@ -308,180 +326,18 @@ int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
     std::cin.tie(0);
 
-    //readFlowGraph(std::cin);
-    FlowGraph* flow_graph_ptr = readFromFile("flowgraph.in");
-    std::cout << *flow_graph_ptr << std::endl;
-    std::string discard;
-    std::getline(std::cin, discard);
-    breadth_first(*flow_graph_ptr);
-    breadth_first(*flow_graph_ptr);
-    //solveFlow();
+    FlowGraph* flow_graph_ptr = readFlowGraphFromStream(std::cin);
+    clock_t begin(clock());
+    debug_println(BIT0,flow_graph_ptr->to_str());
+    while (breadth_first(*flow_graph_ptr)) {
 
-    //writeFlow();
+    }
+    clock_t end = clock();
+    std::cout << *flow_graph_ptr << std::endl;
 
     delete flow_graph_ptr;
+
+    double elapsed_clocks = end - begin;
+    debug_println(BIT7,"No of clocks: " << elapsed_clocks);
     return 0;
 };
-
-/*struct granne{
-    int self;
-    int g;
-    int c;
-    int f;
-    int cf;
-    int p;
-    granne * gp;
-};
-
-const int LIST_SIZE = 10001;
-std::vector<granne *> * grannlista[LIST_SIZE];
-
-int s, t;
-void readFlowGraph() {
-    for(int j = 0; j < LIST_SIZE; ++j) {
-        grannlista[j] = new std::vector<granne>;
-    }
-
-    int v, e;
-    cin >> v >> s >> t >> e;
-
-    for (int i = 0; i < e; ++i) {
-        //DET SISTA VI GJORDE VAR ATT ÄNDRA
-        //granne * nyGranne = new granne;
-        // ^^^^^
-        //granne nyGranne;
-        granne * nyGranne = new granne;
-
-        cin >> nyGranne->self >> nyGranne->g >> nyGranne->c;
-        nyGranne->cf = nyGranne->c;
-        nyGranne->f = 0;
-        nyGranne->p = -1;
-
-        granne * inversGranne = new granne;
-        inversGranne->self = nyGranne->g;
-        inversGranne->g = nyGranne->self;
-        inversGranne->c = nyGranne->c;
-        inversGranne->cf = inversGranne->c;
-        inversGranne->f = 0;
-        inversGranne->p = -1;
-
-        nyGranne->gp = inversGranne;
-        inversGranne->gp = nyGranne;
-
-        (*grannlista[nyGranne->self]).push_back(nyGranne);
-        (*grannlista[nyGranne->g]).push_back(inversGranne);
-    }
-    for (int k = 0; k < e; ++k) {
-        for (int l = 0; l < (*grannlista[k]).size(); ++l) {
-            cerr << (*grannlista[k])[l].self << " " << (*grannlista[k])[l].g << "\n";
-            cerr << "INVERS: " << (*grannlista[k])[l].gp->self << "\n";
-        }
-    }
-}
-
-std::queue<int> bfsQueue;
-int visited[LIST_SIZE] = {0};
-std::vector<int> stig;
-
-int breathFirstSearch(int nod, int goal) {
-    if (bfsQueue.size() > 0) {
-        bfsQueue.pop();
-    }
-
-    for (int i = 0; i < (*grannlista[nod]).size(); i++) {
-        cerr << (*grannlista[nod])[i].self << " " << (*grannlista[nod])[i].g << " " << (*grannlista[nod])[i].cf << "\n";
-        if ((*grannlista[nod])[i].cf > 0 && !visited[(*grannlista[nod])[i].g]) {
-            visited[(*grannlista[nod])[i].g] = 1;
-            (*grannlista[nod])[i].p = nod;
-            bfsQueue.push((*grannlista[nod])[i].g);
-
-            cerr << "GODKÄND: " << (*grannlista[nod])[i].self << " " << (*grannlista[nod])[i].g << "\n";
-            if((*grannlista[nod])[i].g == t) {
-                stig.push_back(nod);
-                return 1;
-            }
-        }
-    }
-    while (bfsQueue.size() > 0) {
-        if (breathFirstSearch(bfsQueue.front(), t)) {
-            stig.push_back(nod);
-            return 1;
-        }
-    }
-    return 0;
-}
-
-std::vector<granne *> stiglista;
-
-int findMin() {
-    int min_cf = LIST_SIZE;
-    for (int i = 0; i < stiglista.size(); i++) {
-        if ((*stiglista[i]).cf < min_cf) {
-            min_cf = (*stiglista[i]).cf;
-        }
-    }
-    return min_cf;
-}
-
-void solveFlow() {
-    stig.push_back(t);
-    visited[s] = 1;
-    cerr << "BFS KLAR: " << breathFirstSearch(s, t) << "\n";
-
-    cerr << stig[0] << " ";
-    for (int i = 1; i < stig.size(); i++) {
-        cerr << stig[i] << " ";
-        stiglista.push_back(&((*grannlista[i])[i - 1]));
-    }
-    cerr << "\n";
-
-    while (stig.size() > 1) {
-        int r = findMin();
-        for (int i = 0; i < stiglista.size(); i++) {
-            stiglista[i]->f = stiglista[i]->f + r;
-            stiglista[i]->gp->f = -(stiglista[i]->f);
-            cerr << "ändrade " << stiglista[i]->gp->self << "\n";
-
-            stiglista[i]->cf = (stiglista[i]->c) - (stiglista[i]->f);
-            stiglista[i]->gp->cf = (stiglista[i]->gp->c) - (stiglista[i]->gp->f);
-            break;
-        }
-
-        while(!bfsQueue.empty()) {
-            bfsQueue.pop();
-        }
-        for(int i = 0; i < LIST_SIZE; i++) {
-            visited[i] = 0;
-        }
-        while(!stig.empty()) {
-            stig.pop_back();
-        }
-        while(!stiglista.empty()) {
-            stiglista.pop_back();
-        }
-
-        stig.push_back(t);
-        visited[s] = 1;
-        cerr << "BFS KLAR: " << breathFirstSearch(s, t) << "\n";
-
-        for (int i = 1; i < stig.size(); i++) {
-            cerr << stig[i] << " ";
-            stiglista.push_back(&((*grannlista[i])[i - 1]));
-        }
-        cerr << "\n";
-        break;
-    }
-
-
-}
-
-void writeFlow() {
-    cout << s << " " << t << "\n";
-    for(int i = 0; i < LIST_SIZE; i++) {
-        for (int j = 0; j < (*grannlista[i]).size(); j++) {
-            cout << (*grannlista[i])[j].self << " " << (*grannlista[i])[j].g << " " << (*grannlista[i])[j].f << "\n";
-        }
-    }
-}
-
-*/
