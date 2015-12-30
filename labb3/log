@@ -1,1 +1,22 @@
-No of clocks: 30
+Number of vertices read from flow graph: 7
+Flow graph Source: 6 Target: 7 Edges: 9
+Index from: 1 Index to: 4 Capacity: 1
+Index from: 1 Index to: 3 Capacity: 1
+Index from: 2 Index to: 5 Capacity: 1
+Index from: 2 Index to: 3 Capacity: 1
+Index from: 6 Index to: 1 Capacity: 1
+Index from: 6 Index to: 2 Capacity: 1
+Index from: 3 Index to: 7 Capacity: 1
+Index from: 4 Index to: 7 Capacity: 1
+Index from: 5 Index to: 7 Capacity: 1
+Flowgraph sent to be read by solveflow
+
+Checking edge 1-4:[1/1]
+Checking edge 1-3:[0/1]
+Checking edge 2-5:[1/1]
+Checking edge 2-3:[0/1]
+Checking edge 6-1:[1/1]
+Checking edge 6-2:[1/1]
+Checking edge 3-7:[0/1]
+Checking edge 4-7:[1/1]
+Checking edge 5-7:[1/1]

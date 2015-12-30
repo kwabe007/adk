@@ -1,3 +1,6 @@
+#ifndef SOLVE_FLOW_HPP
+#define SOLVE_FLOW_HPP
+
 #include <iostream>
 #include <vector>
 #include <queue>
@@ -6,10 +9,9 @@
 #include <limits.h>
 #include <list>
 #include <ctime>
+#include <sstream>
 #include "debugmacro.hpp"
 
-std::ofstream ERR_FS("log");
-unsigned int GLOBAL_DEBUG_BITS = 0b10000000;
 
 struct Vertex {
 
@@ -153,6 +155,24 @@ struct FlowGraph {
         }
 
         output += "Vertices: " + std::to_string(get_vertices());
+        return output;
+    }
+
+    std::string to_bipart_matching(unsigned int x, unsigned int y) const {
+        std::string output;
+        std::size_t no_of_edges = 0;
+        std::string edges_str;
+        output += std::to_string(x) + " " + std::to_string(y) + "\n";
+
+        for (const Edge& edge : edge_vec) {
+            debug_println(BIT4,"Checking edge " << edge.get_str());
+            if (edge.flow > 0 && ((edge.from_vertex_index != source && edge.to_vertex_index != source) && (edge.from_vertex_index != target && edge.to_vertex_index != target))) {
+                edges_str += "\n" + std::to_string(edge.from_vertex_index) + " " + std::to_string(edge.to_vertex_index);
+                ++no_of_edges;
+            }
+
+        }
+        output += std::to_string(no_of_edges) + edges_str;
         return output;
     }
 
@@ -318,11 +338,19 @@ bool breadth_first(FlowGraph& fg) {
     return path_found;
 }
 
+void edmund_karp(FlowGraph& fg) {
+    while (breadth_first(fg)) {
+
+    }
+}
+
 void search(FlowGraph& fg) {
     std::vector<Step> steps;
 }
 
-int main(int argc, char* argv[]) {
+#endif
+
+/*int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
     std::cin.tie(0);
 
@@ -340,4 +368,6 @@ int main(int argc, char* argv[]) {
     double elapsed_clocks = end - begin;
     debug_println(BIT7,"No of clocks: " << elapsed_clocks);
     return 0;
-};
+};*/
+
+
