@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <unistd.h>
+#include <ctime>
 #include <cstring>
 #include <fstream>
 #include <sstream>
@@ -9,8 +10,7 @@
 
 #define DEBUG 0
 
-std::string seek(int position, FILE * file, int offset, int length)
-{
+std::string seek(int position, FILE * file, int offset, int length) {
     char buffer [length];
     std::string completeBuffer = "";
 
@@ -34,41 +34,9 @@ std::string seek(int position, FILE * file, int offset, int length)
                 currentPosition = ftell(file);
             }
         }
-        return completeBuffer;
     }
+    return completeBuffer;
 }
-
-/*int converter(std::string buffer) {
-    int wprefix[3] = {0};
-    int j = 0;
-
-    for(int i = 0; i < 3; i++) {
-        if(buffer[j] == 32) {
-            wprefix[i] = 0;
-        }
-        else if (buffer[j] >= 65 and buffer[j] <= 90) {
-            wprefix[i] = buffer[j] - 64;
-        }
-        else if (buffer[j] >= 97 and buffer[j] <= 122) {
-            wprefix[i] = buffer[j] - 96;
-        }
-        else if (buffer[j] == -61) {
-            if (buffer[j+1] == -91) {
-                wprefix[i] = 26;
-            }
-            else if (buffer[j+1] == -92) {
-                wprefix[i] = 27;
-            }
-            else if (buffer[j+1] == -74) {
-                wprefix[i] = 28;
-            }
-            j++;
-        }
-        j++;
-    }
-
-    return wprefix[0] * 900 + wprefix[1] * 30 + wprefix[2];
-}*/
 
 int converter(std::string buffer) {
     int wprefix[3] = {0};
@@ -94,7 +62,7 @@ int converter(std::string buffer) {
 
 std::string toIso(std::string input) {
     std::string output = "";
-    for (int i = 0; i < input.length(); i++) {
+    for (unsigned int i = 0; i < input.length(); i++) {
         char back = input.at(i);
         if(back >= 65 and back <= 90) {
             output.push_back(back + 32);
@@ -122,7 +90,7 @@ std::string toIso(std::string input) {
 
 int * binSearch(std::string word, int * indexArray, FILE * file) {
     int wprefix = converter(word);
-    int n = 1;
+    unsigned int n = 1;
     while (indexArray[wprefix + n] == -1) {
         n++;
     }
@@ -221,7 +189,7 @@ int * createIndexArray()
     memset(indexArray, -1, sizeof(int)*indexSize);
 
     //std::ifstream index("text2");
-    std::ifstream index("/var/tmp/konkordanzBitches");
+    std::ifstream index("/var/tmp/i_stands_for_index");
     std::string buffer;
 
     std::fstream arrayFile;
@@ -260,14 +228,14 @@ int * createIndexArray()
     return indexArray;
 }
 
-main(int argc, char** argv)
+int main(int argc, char** argv)
 {
     int * indexArray = createIndexArray();
 
 
     FILE * indexFile;
     //indexFile = fopen("text2", "r");
-    indexFile = fopen("/var/tmp/konkordanzBitches", "r");
+    indexFile = fopen("/var/tmp/i_stands_for_index", "r");
 
     FILE * textFile;
     //textFile = fopen("text", "r");
@@ -280,21 +248,22 @@ main(int argc, char** argv)
     std::string word(argv[1]);
     word = toIso(word);
     printf("Sökta ordet: %s\n", word.c_str());
-
+    clock_t begin = clock();
     int * result = binSearch(word, indexArray, indexFile);
+    clock_t end = clock();
+    double estimated_elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
 
     if(result[0] == -1) {
         printf("Hittade inte ordet.\n");
-        system("date +%S.%9N");
     } else {
         int i;
         for(i = 0; i < 10000000; i++) {
             if(result[i] == -1) {
                 printf("Det finns %d förekomst(er) av ordet.\n", i);
+                printf("Ungefärlig tid: %f.\n",estimated_elapsed_secs);
                 break;
             }
         }
-        system("date +%S.%9N");
         std::string answer = "n";
         if(i > 25) {
             std::cout << "Det finns fler än 25 förekomster. Vill du visa? [y/n] ";

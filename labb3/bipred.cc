@@ -56,7 +56,7 @@ FlowGraph* writeFlowGraph() {
     int v = X + Y + 2, e = (*grannlista[0])[2];
     int s = X + Y + 1, t = X + Y + 2;
 
-    std::stringstream ss;
+    std::stringstream ss; //Strängstream där flödesproblem skickas till flödeslösaren
 
     // Skriv ut antal hörn och kanter samt källa och sänka
     ss << v << "\n" << s << " " << t << "\n" << e + (X + Y) << "\n";
@@ -76,11 +76,13 @@ FlowGraph* writeFlowGraph() {
         //cerr << u << " " << v << " " << c << "\n";
     }
 
+    //Koppla alla x till källa
     for (int i = 1; i <= X; ++i) {
         ss << s << " " << i << " " << 1 << "\n";
         //cerr << s << " " << i << " " << 1 << "\n";
     }
 
+    //Koppla alla y till sänka
     for (int i = X + 1; i <= X + Y; ++i) {
         ss << i << " " << t << " " << 1 << "\n";
         //cerr << i << " " << t << " " << 1 << "\n";

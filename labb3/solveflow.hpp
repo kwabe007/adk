@@ -228,15 +228,6 @@ struct Step {
     }
 };
 
-struct StepHasher {
-  std::size_t operator()(const Step& s) const {
-    using std::size_t;
-    using std::hash;
-
-    return s.current_vertex_index;
-  }
-};
-
 FlowGraph* readFlowGraphFromStream(std::istream& input_stream) {
     std::size_t size;
     input_stream >> size;
